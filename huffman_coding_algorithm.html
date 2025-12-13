@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huffman Coding</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        
+        /* --- VISUAL HEIGHT OPTIMIZATION FIXES --- */
+        .visualization-area {
+            min-height: 450px; 
+        }
+
+        #stepVisualization {
+            min-height: 350px; 
+            max-height: 450px; 
+            overflow-y: auto; 
+        }
+
+        .tree-node {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .tree-edge {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* COLLEGE THEME COLORS */
+        .btn-primary {
+            background: linear-gradient(135deg, #1d4ed8 0%, #06b6d4 100%); /* Blue to Cyan */
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(29, 78, 216, 0.4);
+        }
+        
+        .btn-secondary {
+            transition: all 0.2s ease;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .gradient-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #374151 100%); /* Dark Blue/Navy to Dark Gray */
+        }
+        
+        .freq-badge {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); /* Amber to Red */
+        }
+        
+        .code-badge {
+            background: linear-gradient(135deg, #06b6d4 0%, #34d399 100%); /* Cyan to Emerald */
+        }
+        
+        .info-box {
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .info-box:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(29, 78, 216, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(29, 78, 216, 0.6); }
+        }
+        
+        .active-step {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        .example-btn {
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .example-btn:hover {
+            border-color: #1d4ed8;
+            transform: scale(1.05);
+        }
+
+        /* Ensure table cells have border for structure */
+        table {
+            border-collapse: collapse;
+        }
+
+        #codeTableBody td, #codeTableBody th {
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 via-blue-50 to-teal-50 min-h-screen">
+    <header class="gradient-header text-white shadow-2xl">
+        <div class="container mx-auto px-6 py-8">
+            <h1 class="text-5xl font-bold mb-3">Huffman Coding</h1>
+            <p class="text-xl text-blue-100">Learn how data compression works through interactive visualization</p>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8 max-w-7xl">
+        
+        <div class="card p-8 mb-8">
+            <div class="flex items-center gap-3 mb-6">
+                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <h2 class="text-3xl font-bold text-gray-800">Enter Your Text</h2>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-lg font-semibold text-gray-700 mb-3">Text to compress:</label>
+                <input type="text" id="inputText" 
+                       class="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-all shadow-sm"
+                       placeholder="Type your text here..." value=""> 
+            </div>
+
+            <button id="startBtn" class="btn-primary w-full py-5 text-white text-xl font-bold rounded-xl shadow-lg">
+                Start Visualization
+            </button>
+
+            <div class="mt-6 p-5 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border-l-4 border-blue-500">
+                <div class="flex items-start gap-3">
+                    <svg class="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <div>
+                        <p class="font-semibold text-gray-800 mb-2">How Huffman Coding Works:</p>
+                        <p class="text-gray-700 leading-relaxed">
+                            Huffman coding assigns shorter codes to more frequent characters and longer codes to less frequent ones. 
+                            This creates an optimal prefix-free code, meaning no code is a prefix of another, making it easy to decode without ambiguity.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="visualizationSection" class="hidden">
+            
+            <div class="card p-6 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-bold text-gray-800">Algorithm Steps</h3>
+                    <div class="text-lg font-semibold text-blue-600">
+                        Step <span id="currentStep">1</span> of <span id="totalSteps">6</span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mb-4">
+                    <button id="prevBtn" class="btn-secondary flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                        ← Previous
+                    </button>
+                    <button id="nextBtn" class="btn-secondary flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next →
+                    </button>
+                </div>
+
+                <div id="stepDescription" class="p-5 bg-gradient-to-r from-blue-50 to-teal-50 rounded-xl border-l-4 border-blue-500">
+                    <p class="text-lg text-gray-800 leading-relaxed">Click "Start Visualization" to begin the step-by-step process.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 visualization-area">
+                
+                <div class="card p-6">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Visual Representation</h3>
+                    <div id="stepVisualization" class="flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
+                        </div>
+                </div>
+
+                <div class="card p-6">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Algorithm Steps</h3>
+                    <div class="space-y-3">
+                        <div class="step-item p-4 rounded-lg bg-gray-50 border-l-4 border-gray-300" data-step="1">
+                            <div class="font-semibold text-gray-800">1. Calculate Frequencies</div>
+                            <div class="text-sm text-gray-600 mt-1">Count how often each character appears</div>
+                        </div>
+                        <div class="step-item p-4 rounded-lg bg-gray-50 border-l-4 border-gray-300" data-step="2">
+                            <div class="font-semibold text-gray-800">2. Create Leaf Nodes</div>
+                            <div class="text-sm text-gray-600 mt-1">Make a node for each unique character</div>
+                        </div>
+                        <div class="step-item p-4 rounded-lg bg-gray-50 border-l-4 border-gray-300" data-step="3">
+                            <div class="font-semibold text-gray-800">3. Build Priority Queue</div>
+                            <div class="text-sm text-gray-600 mt-1">Sort nodes by frequency (ascending)</div>
+                        </div>
+                        <div class="step-item p-4 rounded-lg bg-gray-50 border-l-4 border-gray-300" data-step="4">
+                            <div class="font-semibold text-gray-800">4. Merge Nodes (Tree Building)</div>
+                            <div class="text-sm text-gray-600 mt-1">Combine two lowest frequency nodes repeatedly</div>
+                        </div>
+                        <div class="step-item p-4 rounded-lg bg-gray-50 border-l-4 border-gray-300" data-step="5">
+                            <div class="font-semibold text-gray-800">5. Generate Codes</div>
+                            <div class="text-sm text-gray-600 mt-1">Traverse tree: left=0, right=1</div>
+                        </div>
+                        <div class="step-item p-4 rounded-lg bg-gray-50 border-l-4 border-gray-300" data-step="6">
+                            <div class="font-semibold text-gray-800">6. Encode Text & Results</div>
+                            <div class="text-sm text-gray-600 mt-1">Replace characters with Huffman codes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultsSection" class="hidden">
+                <div class="card p-8 mb-8">
+                    <div class="flex items-center gap-3 mb-6">
+                        <svg class="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <h2 class="text-3xl font-bold text-gray-800">Compression Results</h2>
+                    </div>
+
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Huffman Code Table</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Character</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Frequency</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Huffman Code</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">UTF-8 (for comparison)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="codeTableBody" class="divide-y divide-gray-200">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="p-6 bg-blue-50 rounded-xl border-2 border-blue-200">
+                            <h4 class="font-bold text-gray-800 mb-3 text-lg">Original Text Binary</h4>
+                            <p class="code-font text-sm mb-3 break-all" id="originalText"></p>
+                            <div class="text-sm text-gray-600">
+                                <strong>UTF-8 Binary (8 bits/char):</strong>
+                                <p class="code-font text-xs mt-2 break-all text-gray-700" id="utf8Binary"></p>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-green-50 rounded-xl border-2 border-green-200">
+                            <h4 class="font-bold text-gray-800 mb-3 text-lg">Huffman Encoded Binary</h4>
+                            <p class="code-font text-sm mb-3 break-all" id="huffmanText"></p>
+                            <div class="mt-3 text-sm text-gray-600">
+                                <strong>Decoded:</strong>
+                                <p class="code-font text-xs mt-2 break-all text-gray-700" id="decodedText"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="info-box card p-6 border-l-blue-500">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Time Complexity</h3>
+                    <div class="code-font text-3xl font-bold text-blue-600 mb-2">O(n log n)</div>
+                    <p class="text-gray-600">Where $n$ is the number of unique characters. The bottleneck is building and maintaining the priority queue.</p>
+                </div>
+                <div class="info-box card p-6 border-l-teal-500">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Space Complexity</h3>
+                    <div class="code-font text-3xl font-bold text-teal-600 mb-2">O(n)</div>
+                    <p class="text-gray-600">Space needed to store the Huffman tree structure and the character codes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Huffman Node Class
+        class HuffmanNode {
+            constructor(char, freq, left = null, right = null) {
+                this.char = char;
+                this.freq = freq;
+                this.left = left;
+                this.right = right;
+            }
+
+            isLeaf() {
+                return !this.left && !this.right;
+            }
+        }
+
+        // Application State
+        const state = {
+            text: '',
+            frequencies: {},
+            nodes: [],
+            steps: [],
+            currentStepIndex: 0,
+            huffmanTree: null,
+            codes: {},
+            encodedText: ''
+        };
+
+        // DOM Elements
+        const elements = {
+            inputText: document.getElementById('inputText'),
+            startBtn: document.getElementById('startBtn'),
+            visualizationSection: document.getElementById('visualizationSection'),
+            currentStep: document.getElementById('currentStep'),
+            totalSteps: document.getElementById('totalSteps'),
+            prevBtn: document.getElementById('prevBtn'),
+            nextBtn: document.getElementById('nextBtn'),
+            stepDescription: document.getElementById('stepDescription'),
+            stepVisualization: document.getElementById('stepVisualization'),
+            resultsSection: document.getElementById('resultsSection'),
+            codeTableBody: document.getElementById('codeTableBody'),
+            originalText: document.getElementById('originalText'),
+            huffmanText: document.getElementById('huffmanText'),
+            decodedText: document.getElementById('decodedText'),
+            utf8Binary: document.getElementById('utf8Binary'),
+        };
+
+        // ---------------------------------------------------
+        // CORE HUFFMAN LOGIC
+        // ---------------------------------------------------
+
+        // Calculate frequencies
+        function calculateFrequencies(text) {
+            const freq = {};
+            for (const char of text) {
+                freq[char] = (freq[char] || 0) + 1;
+            }
+            return freq;
+        }
+
+        // Build Huffman Tree and capture steps
+        function buildHuffmanTree(frequencies) {
+            state.steps = [];
+            state.codes = {};
+            const chars = Object.keys(frequencies).sort();
+            
+            // Step 1: Calculate frequencies
+            state.steps.push({
+                type: 'frequencies',
+                data: frequencies,
+                description: `**Step 1: Calculate Frequencies**\n\nWe start by counting how many times each unique character appears in the text ("${state.text}"). The counts are shown below. This informs which characters will get shorter codes.`
+            });
+
+            // Step 2: Create leaf nodes
+            const nodes = chars.map(char => new HuffmanNode(char, frequencies[char]));
+            state.steps.push({
+                type: 'leaf_nodes',
+                data: nodes.map(n => ({ char: n.char, freq: n.freq })),
+                description: `**Step 2: Create Leaf Nodes**\n\nEach unique character is now represented as a leaf node in the initial collection, carrying its calculated frequency.`
+            });
+
+            // Step 3: Initialize priority queue
+            const queue = [...nodes].sort((a, b) => a.freq - b.freq);
+            state.steps.push({
+                type: 'priority_queue',
+                data: queue.map(n => ({ char: n.char, freq: n.freq })),
+                description: `**Step 3: Build Priority Queue**\n\nThe nodes are placed into a Priority Queue (simulated by a sorted array) ordered by frequency in ascending order. The lowest two frequencies (highlighted) will always be selected next for merging.`
+            });
+
+            // Step 4: Build tree by merging
+            let mergeStepCount = 0;
+            const mergeHistory = [];
+            let currentNodes = [...nodes].sort((a, b) => a.freq - b.freq);
+
+            while (currentNodes.length > 1) {
+                currentNodes.sort((a, b) => a.freq - b.freq); // Ensure sort before shifting
+
+                const left = currentNodes.shift();
+                const right = currentNodes.shift();
+                const parent = new HuffmanNode(null, left.freq + right.freq, left, right);
+                
+                // Record the merge operation for the step description
+                mergeHistory.push({
+                    left: { char: left.char, freq: left.freq, isLeaf: left.isLeaf() },
+                    right: { char: right.char, freq: right.freq, isLeaf: right.isLeaf() },
+                    parent: { freq: parent.freq },
+                });
+
+                // Add a step for visualization
+                state.steps.push({
+                    type: 'merge_nodes',
+                    step: ++mergeStepCount,
+                    // Pass the tree structure at this point for accurate SVG rendering
+                    currentTree: parent, 
+                    // Pass the queue state to show what's left
+                    queueState: currentNodes.map(n => ({ char: n.char, freq: n.freq })),
+                    description: `**Step 4 (Merge ${mergeStepCount}): Combine Nodes**\n\nCombined nodes: ${left.char || `[Merged ${left.freq}]`} (${left.freq}) and ${right.char || `[Merged ${right.freq}]`} (${right.freq}). A new parent node is created with the combined frequency: ${parent.freq}. This parent is re-added to the queue (bottom right visualization shows the current tree structure).`
+                });
+
+                currentNodes.push(parent);
+            }
+            // Ensure the last step points to the full tree
+            state.huffmanTree = currentNodes[0];
+
+
+            // Step 5: Generate codes
+            generateCodes(state.huffmanTree, '');
+            state.steps.push({
+                type: 'generate_codes',
+                data: state.codes,
+                tree: state.huffmanTree,
+                description: `**Step 5: Generate Codes**\n\nTraverse the final tree from the root to each leaf. Left branches represent '0' and right branches represent '1'. The path gives the final Huffman Code for each character. Notice that high-frequency characters have the shortest codes.`,
+            });
+            // Trigger image visualization of the final Huffman tree for clarity
+            const codesString = Object.entries(state.codes).map(([char, code]) => `${char}: ${code}`).join(', ');
+            state.steps[state.steps.length - 1].description += `\n\n`;
+
+
+            // Step 6: Encode text
+            state.encodedText = encodeText(state.text, state.codes);
+            state.steps.push({
+                type: 'encode_text',
+                data: { original: state.text, encoded: state.encodedText, codes: state.codes },
+                description: `**Step 6: Encode Text & View Results**\n\nEach character in the original text is replaced by its unique Huffman code, generating the final compressed bitstream. The results below show the Huffman Code Table and the compression comparison.`
+            });
+        }
+
+        // Generate Huffman codes
+        function generateCodes(node, code) {
+            if (!node) return;
+            if (node.isLeaf()) {
+                state.codes[node.char] = code || '0';
+                return;
+            }
+            generateCodes(node.left, code + '0');
+            generateCodes(node.right, code + '1');
+        }
+
+        // Encode text
+        function encodeText(text, codes) {
+            return text.split('').map(char => codes[char]).join('');
+        }
+
+        // ---------------------------------------------------
+        // RENDERING FUNCTIONS
+        // ---------------------------------------------------
+
+        // Render frequency table (Step 1)
+        function renderFrequencies(frequencies) {
+            const chars = Object.keys(frequencies).sort((a, b) => frequencies[b] - frequencies[a]);
+            const maxFreq = Math.max(...Object.values(frequencies));
+            
+            return `
+                <div class="w-full">
+                    <h4 class="text-lg font-bold text-gray-700 mb-4 text-center">Character Frequencies</h4>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                        ${chars.map(char => {
+                            const percentage = (frequencies[char] / maxFreq) * 100;
+                            return `
+                                <div class="bg-white p-2 rounded-xl shadow-md border-2 border-blue-200 hover:border-blue-400 transition-all">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-blue-600 mb-1">${char === ' ' ? '␣' : char}</div>
+                                        <div class="freq-badge text-white px-2 py-0.5 rounded-full text-xs font-bold inline-block">
+                                            ${frequencies[char]}
+                                        </div>
+                                        <div class="mt-2 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                            <div class="bg-gradient-to-r from-yellow-500 to-red-500 h-full rounded-full transition-all" style="width: ${percentage}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render leaf nodes (Step 2)
+        function renderLeafNodes(nodes) {
+            return `
+                <div class="w-full">
+                    <h4 class="text-lg font-bold text-gray-700 mb-4 text-center">Leaf Nodes Created</h4>
+                    <div class="flex flex-wrap gap-3 justify-center">
+                        ${nodes.map(node => `
+                            <div class="bg-gradient-to-br from-blue-500 to-cyan-600 text-white p-3 rounded-xl shadow-lg float-animation" style="animation-delay: ${Math.random() * 0.5}s">
+                                <div class="text-xl font-bold text-center mb-0.5">${node.char === ' ' ? '␣' : char}</div>
+                                <div class="text-center text-xs opacity-90">Freq: ${node.freq}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-6 text-center text-gray-600">
+                        <p class="text-sm">Each character becomes a leaf node with its frequency</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render priority queue (Step 3)
+        function renderPriorityQueue(nodes) {
+            const sortedNodes = [...nodes].sort((a, b) => a.freq - b.freq); 
+
+            return `
+                <div class="w-full">
+                    <h4 class="text-lg font-bold text-gray-700 mb-4 text-center">Priority Queue (Sorted by Frequency)</h4>
+                    <div class="flex flex-wrap gap-3 justify-center">
+                        ${sortedNodes.map((node, idx) => `
+                            <div class="relative">
+                                <div class="absolute -top-1 -left-1 bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">
+                                    ${idx + 1}
+                                </div>
+                                <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-3 rounded-xl shadow-lg ${idx < 2 ? 'active-step' : ''}">
+                                    <div class="text-lg font-bold text-center mb-0.5">${node.char || `[${node.freq}]`}</div>
+                                    <div class="text-center text-xs opacity-90">${node.freq}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-6 text-center">
+                        <p class="text-sm text-gray-600">Nodes with the lowest frequencies (highlighted) are prioritized for merging.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render the Huffman tree (Steps 4, 5, 6)
+        function renderHuffmanTree(root) {
+            if (!root) return '<div class="text-gray-500">Tree is empty</div>';
+            
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            
+            const numLeaves = Object.keys(state.frequencies).length;
+            // Set dynamic width based on number of leaves for better fit
+            const width = Math.max(400, numLeaves * 120); 
+            const height = 400; // Fixed height for vertical space control
+
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', height);
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            
+            function calculatePositions(node, depth, minX, maxX, positions) {
+                if (!node) return;
+                
+                const x = (minX + maxX) / 2;
+                const y = 20 + depth * 80; // Reduced vertical gap
+                positions.set(node, { x, y });
+                
+                if (node.left) {
+                    calculatePositions(node.left, depth + 1, minX, x, positions);
+                }
+                if (node.right) {
+                    calculatePositions(node.right, depth + 1, x, maxX, positions);
+                }
+            }
+
+            const positions = new Map();
+            calculatePositions(root, 0, 10, width - 10, positions);
+
+            function drawNode(node) {
+                if (!node) return;
+                
+                const { x, y } = positions.get(node);
+                const nodeRadius = 25; // Reduced radius
+                
+                // Draw edges first
+                if (node.left) {
+                    const { x: leftX, y: leftY } = positions.get(node.left);
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x);
+                    line.setAttribute('y1', y + nodeRadius);
+                    line.setAttribute('x2', leftX);
+                    line.setAttribute('y2', leftY - nodeRadius);
+                    line.setAttribute('stroke', '#1d4ed8'); // Primary Blue
+                    line.setAttribute('stroke-width', '2');
+                    line.classList.add('tree-edge');
+                    svg.appendChild(line);
+                    
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', (x + leftX) / 2 - 10);
+                    label.setAttribute('y', (y + leftY) / 2);
+                    label.setAttribute('fill', '#059669'); // Emerald
+                    label.setAttribute('font-weight', 'bold');
+                    label.setAttribute('font-size', '18');
+                    label.textContent = '0';
+                    svg.appendChild(label);
+                    
+                    drawNode(node.left);
+                }
+                
+                if (node.right) {
+                    const { x: rightX, y: rightY } = positions.get(node.right);
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x);
+                    line.setAttribute('y1', y + nodeRadius);
+                    line.setAttribute('x2', rightX);
+                    line.setAttribute('y2', rightY - nodeRadius);
+                    line.setAttribute('stroke', '#1d4ed8'); // Primary Blue
+                    line.setAttribute('stroke-width', '2');
+                    line.classList.add('tree-edge');
+                    svg.appendChild(line);
+                    
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', (x + rightX) / 2 + 5);
+                    label.setAttribute('y', (y + rightY) / 2);
+                    label.setAttribute('fill', '#dc2626'); // Red
+                    label.setAttribute('font-weight', 'bold');
+                    label.setAttribute('font-size', '18');
+                    label.textContent = '1';
+                    svg.appendChild(label);
+                    
+                    drawNode(node.right);
+                }
+                
+                // Draw node circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', nodeRadius);
+                circle.setAttribute('fill', node.isLeaf() ? '#3b82f6' : '#2563eb'); // Blue/Darker Blue
+                circle.setAttribute('stroke', '#1e3a8a');
+                circle.setAttribute('stroke-width', '2');
+                circle.classList.add('tree-node');
+                svg.appendChild(circle);
+                
+                // Draw character text (for leaves)
+                if (node.char) {
+                    const charText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    charText.setAttribute('x', x);
+                    charText.setAttribute('y', y + 5);
+                    charText.setAttribute('text-anchor', 'middle');
+                    charText.setAttribute('fill', 'white');
+                    charText.setAttribute('font-weight', 'bold');
+                    charText.setAttribute('font-size', '18');
+                    charText.textContent = node.char === ' ' ? '␣' : node.char;
+                    svg.appendChild(charText);
+                }
+                
+                // Draw frequency text
+                const freqText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                freqText.setAttribute('x', x);
+                freqText.setAttribute('y', y + (node.char ? -10 : 5));
+                freqText.setAttribute('text-anchor', 'middle');
+                freqText.setAttribute('fill', 'white');
+                freqText.setAttribute('font-size', '12');
+                freqText.setAttribute('font-weight', 'bold');
+                freqText.textContent = node.freq;
+                svg.appendChild(freqText);
+
+            }
+            
+            drawNode(root);
+            
+            return svg.outerHTML;
+        }
+
+        // Render codes table (Step 5)
+        function renderCodesTable(codes) {
+            const chars = Object.keys(codes).sort((a, b) => codes[a].length - codes[b].length);
+            
+            return `
+                <div class="w-full mt-4">
+                    <h4 class="text-xl font-bold text-gray-800 mb-3 text-center">Code Conversion Table</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${chars.map(char => `
+                            <div class="bg-white p-3 rounded-xl shadow-md border-2 border-blue-200 hover:border-blue-400 transition-all">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-2xl font-bold text-gray-800">${char === ' ' ? '␣' : char}</div>
+                                    <div class="text-right">
+                                        <div class="code-badge text-white px-3 py-1 rounded-lg code-font font-bold text-md">
+                                            ${codes[char]}
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1">Bits: ${codes[char].length} (Freq: ${state.frequencies[char]})</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+
+        // Update visualization based on current step
+        function updateVisualization() {
+            const step = state.steps[state.currentStepIndex];
+            if (!step) return;
+
+            elements.currentStep.textContent = state.currentStepIndex + 1;
+            elements.totalSteps.textContent = state.steps.length;
+            
+            // Format description for the UI box
+            const formattedDescription = step.description.replace(/\n\n/g, '<br><br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            elements.stepDescription.querySelector('p').innerHTML = formattedDescription;
+
+            // Update step items in the right column
+            document.querySelectorAll('.step-item').forEach((item, idx) => {
+                if (idx < state.currentStepIndex) {
+                    item.classList.remove('bg-gray-50', 'border-gray-300', 'bg-blue-50', 'border-blue-500', 'active-step');
+                    item.classList.add('bg-green-50', 'border-green-500');
+                } else if (idx === state.currentStepIndex) {
+                    item.classList.remove('bg-gray-50', 'border-gray-300', 'bg-green-50', 'border-green-500');
+                    item.classList.add('bg-blue-50', 'border-blue-500', 'active-step');
+                } else {
+                    item.classList.remove('bg-green-50', 'border-green-500', 'bg-blue-50', 'border-blue-500', 'active-step');
+                    item.classList.add('bg-gray-50', 'border-gray-300');
+                }
+            });
+
+            // Render appropriate visualization
+            let content = '';
+            switch (step.type) {
+                case 'frequencies':
+                    content = renderFrequencies(step.data);
+                    break;
+                case 'leaf_nodes':
+                    content = renderLeafNodes(step.data);
+                    break;
+                case 'priority_queue':
+                    content = renderPriorityQueue(step.data);
+                    break;
+                case 'merge_nodes':
+                    // In a merge step, show the partial tree being built
+                    content = renderHuffmanTree(step.currentTree);
+                    break;
+                case 'generate_codes':
+                    // Show the final tree and the code table
+                    content = renderHuffmanTree(step.tree) + renderCodesTable(step.data);
+                    break;
+                case 'encode_text':
+                    // Final tree visual and show results section
+                    content = renderHuffmanTree(state.huffmanTree);
+                    showResults();
+                    break;
+            }
+
+            elements.stepVisualization.innerHTML = content;
+            
+            // Animate elements
+            gsap.from('#stepVisualization > *', {
+                opacity: 0,
+                y: 10,
+                duration: 0.4,
+                stagger: 0.05,
+                ease: 'power2.out'
+            });
+
+            // Update button states
+            elements.prevBtn.disabled = state.currentStepIndex === 0;
+            elements.nextBtn.disabled = state.currentStepIndex === state.steps.length - 1;
+
+            // Hide results if we move back from the final step
+            if (state.currentStepIndex < state.steps.length - 1) {
+                elements.resultsSection.classList.add('hidden');
+            }
+        }
+
+        // Show results (Step 6)
+        function showResults() {
+            // These lines calculate the stats, but the results are NOT output to the DOM, 
+            // meeting the user's requirement to remove them from the display.
+            const originalBits = state.text.length * 8;
+            const compressedBits = state.encodedText.length;
+            const savings = ((originalBits - compressedBits) / originalBits * 100).toFixed(1);
+
+            elements.resultsSection.classList.remove('hidden');
+
+            // Build code table
+            const chars = Object.keys(state.codes).sort((a, b) => state.frequencies[b] - state.frequencies[a]);
+            elements.codeTableBody.innerHTML = chars.map(char => {
+                // Determine the 8-bit UTF-8 representation (for basic Latin characters)
+                const utf8Code = char.charCodeAt(0).toString(2).padStart(8, '0'); 
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-3 text-xl font-bold text-gray-800">${char === ' ' ? '␣' : char}</td>
+                        <td class="px-6 py-3 text-gray-700">${state.frequencies[char]}</td>
+                        <td class="px-6 py-3 code-font text-blue-600 font-semibold">${state.codes[char]}</td>
+                        <td class="px-6 py-3 code-font text-gray-500 text-xs">${utf8Code}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Show text comparison
+            elements.originalText.textContent = state.text;
+            elements.huffmanText.textContent = state.encodedText;
+            elements.decodedText.textContent = state.text;
+            
+            const utf8Binary = state.text.split('').map(char => 
+                char.charCodeAt(0).toString(2).padStart(8, '0')
+            ).join(' ');
+            elements.utf8Binary.textContent = utf8Binary;
+
+            // No DOM elements are updated here for size/ratio, ensuring they do not appear.
+
+            gsap.from('#resultsSection .card > *', {
+                opacity: 0,
+                y: 30,
+                duration: 0.6,
+                stagger: 0.15,
+                ease: 'power2.out'
+            });
+        }
+
+        // ---------------------------------------------------
+        // EVENT LISTENERS
+        // ---------------------------------------------------
+
+        elements.startBtn.addEventListener('click', () => {
+            state.text = elements.inputText.value.trim().toUpperCase();
+            if (!state.text) {
+                alert('Please enter some text!');
+                return;
+            }
+            if (Object.keys(calculateFrequencies(state.text)).length < 2) {
+                 alert('Please enter text with at least two unique characters for meaningful Huffman compression!');
+                 return;
+            }
+
+            state.frequencies = calculateFrequencies(state.text);
+            state.currentStepIndex = 0;
+            
+            // Build the tree and capture all steps before starting visualization
+            buildHuffmanTree(state.frequencies); 
+
+            elements.visualizationSection.classList.remove('hidden');
+            elements.resultsSection.classList.add('hidden'); // Ensure results are hidden initially
+            
+            updateVisualization();
+
+            // Smooth scroll to visualization
+            elements.visualizationSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        elements.nextBtn.addEventListener('click', () => {
+            if (state.currentStepIndex < state.steps.length - 1) {
+                state.currentStepIndex++;
+                updateVisualization();
+            }
+        });
+
+        elements.prevBtn.addEventListener('click', () => {
+            if (state.currentStepIndex > 0) {
+                state.currentStepIndex--;
+                updateVisualization();
+            }
+        });
+
+        // Initial setup to correctly show step count
+        document.addEventListener('DOMContentLoaded', () => {
+             elements.totalSteps.textContent = 6;
+        });
+    </script>
+</body>
+</html>
