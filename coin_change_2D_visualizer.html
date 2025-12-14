@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Coin Change - 2D DP Visualizer</title>
+  <style>
+    :root {
+      --bg-main: #f5f5f7; /* Main background color (light grey/off-white) */
+      --bg-card: #ffffff;/* Background color for card-like elements (white) */
+      --bg-subtle: #f8f8fb;/* A slightly darker subtle background */
+      --border-soft: #e0e0ea;/* Light border color for separation */
+      --text-main: #333333;/* Main text color (dark grey) */
+      --accent: #5c7cfa;/* Primary accent color (a medium blue) */
+      --accent-soft: #e4e8ff;/* Soft, light version of the accent color */
+      --highlight: #fff5cc;/* Color for highlighting selected cells/values (soft yellow) */
+      --danger-soft: #ffe3e3; /* Soft color for error states or deletions (light red) */
+      --success-soft: #e3f7e5;/* Soft color for success states (light green) */
+      --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.06);/* A subtle box shadow for depth */
+    }
+/* Global reset and box model definition */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+/* GLOBAL BODY STYLES */
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f1f4f9;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+    }
+
+
+ /* TYPOGRAPHY */
+    h2 {
+        /* Spacing and weight for the main title */
+      margin: 0 0 4px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #222;
+      text-transform: uppercase;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    #subtitle {
+        /* Style for the descriptive text below the main title */
+
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+      max-width: 680px;
+    }
+/* Spacing and weight for the main title */
+    #top-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 12px 18px;
+      background: var(--bg-card);
+      border-radius: 18px;
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      min-width: 680px;
+      max-width: 900px;
+    }
+
+    #top-bar-row {     
+           /* Inner container for horizontal arrangement of input and mode areas */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    #input-area, #mode-area {        
+        /* Layout for groups of inputs (e.g., Coins/Amount and Mode) */
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 13px;
+    }
+    /* Styling for all input fields and select dropdowns */
+
+    input, select {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-subtle);
+      font-size: 14px;
+      outline: none;
+      min-width: 80px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    /* Focus/Active state for inputs */
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      background: #ffffff;
+      box-shadow: 0 0 0 2px rgba(92, 124, 250, 0.2);
+      transform: translateY(-1px);
+    }
+
+    #status-bar {
+        /* Container for informational chips and progress bar (below inputs) */
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .status-chip {       
+         /* Styling for small informational elements */
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #global-progress-wrapper {
+        /* Container for the progress bar track */
+      width: 100%;
+      margin-top: 8px;
+      background: var(--bg-subtle);
+      border-radius: 999px;
+      overflow: hidden;
+      height: 6px;
+      border: 1px solid var(--border-soft);
+    }
+
+    #global-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #3bc9db);
+      transition: width 0.2s ease-out;
+    }
+ /* MAIN CONTENT LAYOUT (PSEUDOCODE & TABLE) */
+    #container {
+         /* Flex container for the two main visualization components (side-by-side on desktop) */
+      display: flex;
+      gap: 24px;
+      margin-top: 14px;
+      align-items: flex-start;
+      max-width: 1000px;
+      width: 100%;
+    }
+
+    #pseudocode, #dp-table-container {
+                /* Shared card styling for the two main panels */
+        
+      border-radius: 16px;
+      border: 1px solid var(--border-soft);
+      padding: 12px 14px;
+      background: var(--bg-card);
+      box-shadow: var(--shadow-soft);
+    }
+
+    #pseudocode {        /* Fixed width for the pseudocode panel */
+    
+      width: 280px;
+      font-size: 13px;
+    }
+
+    .code-title {        /* Styling for the pseudocode section header */
+    
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.7;
+      margin-bottom: 6px;
+    }
+
+    .code-line {        /* Styling for individual lines of pseudocode */
+    
+      padding: 3px 6px;
+      white-space: pre;/* Preserves formatting */
+      border-radius: 8px;
+      margin: 1px 0;
+      transition: background 0.15s ease;
+    }
+
+    .code-line:hover { background: rgba(148,163,184,0.12); 
+    }    /* Highlight style for the currently executing line */
+    
+    .active-line { background: var(--highlight); font-weight: 600; }
+/* DP TABLE STYLING */
+    table {     
+           /* Reset default table spacing */
+      border-collapse: collapse;
+      background: var(--bg-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 13px;
+      min-width: 420px;
+    }
+
+    th, td {
+        /* Shared cell border and sizing */
+      border: 1px solid #d3d3e2;
+      width: 40px;
+      height: 32px;
+      text-align: center;
+      transition: background 0.15s ease;
+    }
+        /* Table header style (Coin/Amount labels) */
+
+    th { background: #f0f0f7; font-weight: 600; font-size: 12px; }
+    /* Highlight class for the cell being actively calculated */
+
+    .current-cell {
+      background: var(--danger-soft) !important;
+      font-weight: 600;
+      transform: scale(1.05);
+    }    /* Highlight class when a better value is found (e.g., minimum coins decreased) */
+    .improved { background: var(--success-soft) !important; font-weight: 600; }
+        /* Highlight class for cells that are part of the current calculation's path (source cells) */
+    .path-cell { background: rgba(59,130,246,0.14); }
+  /* BUTTONS AND CONTROLS */
+    button {
+      padding: 6px 14px;
+      margin: 0 4px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: #ffffff;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover { background:#f3f4ff; border-color:var(--accent); }
+        /* Special style for the primary "Next Step" or "Play" button */
+    #play-btn { background:var(--accent); color:white; border-color:var(--accent); }
+    #play-btn:hover { background:#4a63e8; }
+
+    #controls {
+                /* Container for the step/play buttons, result, and formula */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 12px 18px;
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      max-width: 900px;
+      width: 100%;
+    }
+
+    #play-controls {       
+         /* Container for the navigation buttons */
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #555;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    #note, #result, #progress, #formula {
+                /* Shared style for informational text blocks */
+      margin-top: 6px;
+      text-align: center;
+      max-width: 700px;
+      font-size: 13px;
+      color: #444;
+    }
+
+    #result { font-weight: 600; margin-top: 10px; }
+
+    #formula {
+         /* Style for the formula/recurrence relation display */
+      font-family: monospace;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-soft);
+      margin-bottom: 4px;
+      white-space: pre-wrap;
+    }
+/* MEDIA QUERIES (RESPONSIVENESS) */
+    @media (max-width:900px){
+      #top-bar{min-width:auto;width:100%;}
+      #container{flex-direction:column;}
+      table{min-width:100%;}
+      #pseudocode,#dp-table-container{width:100%;}
+    }
+  </style>
+</head>
+<body>
+  <h1>COIN CHANGE – 2D DP VISUALIZER</h1>
+
+  <p style="
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 6px;
+    text-align: center;
+  ">
+    <b>Group Members:</b>
+    Nitharsana A, Saaniya Ashraf, Arundathi M, Sarani
+  </p>
+
+  <p id="subtitle">
+    Fill the DP table, then backtrack to see one optimal coin combination.
+  </p>
+
+
+
+
+  <div id="top-bar">
+    <div id="top-bar-row">
+      <div id="input-area">
+        <span>Coins:</span><input id="coins-input" type="text" value="1,3,4"/>
+        <span>Amount:</span><input id="amount-input" type="number" value="6"/>
+        <button id="build-btn">Rebuild</button>
+      </div>
+
+      <div id="mode-area">
+        <span>Mode:</span>
+        <select id="mode-select">
+          <option value="fill">Fill DP Table</option>
+          <option value="backtrack">Backtracking</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="status-bar">
+      <div class="status-chip"><span class="status-label">Mode</span><span id="status-mode">Fill DP Table</span></div>
+      <div class="status-chip"><span class="status-label">Step</span><span id="status-step">–</span></div>
+      <div class="status-chip"><span class="status-label">Position</span><span id="status-pos">i=–, j=–</span></div>
+      <div class="status-chip"><span class="status-label">Answer</span><span id="status-answer">–</span></div>
+    </div>
+
+    <div id="global-progress-wrapper"><div id="global-progress-bar"></div></div>
+  </div>
+
+  <div id="result"></div>
+  <div id="progress"></div>
+
+  <div id="container">
+    <div id="pseudocode"><div class="code-title">Pseudocode</div></div>
+    <div id="dp-table-container"></div>
+  </div>
+
+  <div id="controls">
+    <div>
+      <button id="prev-btn">⟵ Prev Step</button>
+      <button id="next-btn">Next Step ⟶</button>
+      <button id="play-btn">Play ▶️</button>
+      <button id="reset-btn">Reset to Step 1</button>
+    </div>
+
+    <div id="complexity" style="
+      margin-top: 6px;
+      text-align: center;
+      font-size: 13px;
+      color: #444;
+    ">
+      <b>Time Complexity:</b>  O(n × amount) ; n = number of coins<br>
+      <b>Space Complexity:</b> O(n × amount)
+    </div>
+
+
+    <div id="play-controls">
+      <span>Speed:</span>
+      <input id="speed-range" type="range" min="150" max="1500" value="700"/>
+      <span id="speed-label">700 ms</span>
+    </div>
+
+    <div id="formula">Formula / explanation will appear here.</div>
+    <div id="note"></div>
+  </div>
+
+<script>
+/* JS unchanged except theme code fully removed */
+/*JS Helper Functions and Variables */
+
+const $=id=>document.getElementById(id);
+const cloneTable=T=>T.map(r=>r.slice());
+const INF=1e9;// Representation of Infinity for DP
+let coins=[1,3,4],amount=6,fillSteps=[],backtrackSteps=[],steps=[],
+    currentIndex=0,timer=null,currentPseudo=[],lastAnswer=null;
+// Pseudocode for Filling the DP Table (Min Coins)
+
+const pseudoFill=[
+"INF = very large",
+"for j in 1..amount: T[0][j] = INF",
+"for i in 1..m:",
+"    coin = coins[i-1]",
+"    for j in 1..amount:",
+"        if j >= coin:",
+"            dont = T[i-1][j]",
+"            use  = 1 + T[i][j-coin]",
+"            T[i][j] = min(dont,use)",
+"        else:",
+"            T[i][j] = T[i-1][j]"
+];
+// Pseudocode for Backtracking (Finding the Path)
+const pseudoBacktrack=[
+"i = m, j = amount",
+"while i>0, j>0 and T[i][j]!=INF:",
+"    if T[i][j] == T[i-1][j]:",
+"        i = i-1 // skip",
+"    else:",
+"        choose coin[i-1]",
+"        j = j - coin[i-1]"
+];
+// Creates a step object for history, ensuring the table is cloned
+
+
+function makeStep(o){return{...o,table:cloneTable(o.table),
+pathCells:o.pathCells?o.pathCells.map(c=>({...c})):null};}
+// Generates the final result text
+
+function solutionText(ans,c,a){
+return ans>=INF/2?`No solution: cannot form ${a} with [${c}].`
+:`Minimum coins to make ${a} with [${c}] is ${ans}.`;
+}
+// Renders the pseudocode block, highlighting the active line number 'l'
+function renderPseudocode(l){
+const pc=$("pseudocode"),title=pc.querySelector(".code-title");
+pc.innerHTML="";pc.appendChild(title);
+currentPseudo.forEach((t,i)=>{
+let d=document.createElement("div");
+d.textContent=t;d.className="code-line"+(i===l?" active-line":"");
+pc.appendChild(d);
+});
+}
+// Renders the DP table, applying highlights based on the current step data
+
+function renderDPTable(step){
+const wrap=$("dp-table-container");wrap.innerHTML="";
+const T=step.table,m=T.length-1,n=T[0].length-1,table=document.createElement("table");
+let head=document.createElement("tr"),empty=document.createElement("th");empty.textContent="";
+head.appendChild(empty);
+for(let j=0;j<=n;j++){let th=document.createElement("th");
+th.textContent=j;if(step.j===j)th.classList.add("col-header-highlight");head.appendChild(th); }
+table.appendChild(head);
+// Table Rows (Coins) and Data Cells
+for(let i=0;i<=m;i++){
+let tr=document.createElement("tr"),row=document.createElement("th");
+row.textContent=i===0?"0":coins[i-1];if(step.i===i)row.classList.add("row-header-highlight");
+tr.appendChild(row);
+for(let j=0;j<=n;j++){
+let td=document.createElement("td"),val=T[i][j];
+td.textContent=val>=INF/2?"∞":val;
+if(step.i===i&&step.j===j)td.classList.add("current-cell");
+if(step.improvedCell&&step.improvedCell.i===i&&step.improvedCell.j===j)td.classList.add("improved");
+if(step.pathCells&&step.pathCells.some(c=>c.i===i&&c.j===j))td.classList.add("path-cell");
+tr.appendChild(td);
+}
+table.appendChild(tr);
+}
+wrap.appendChild(table);
+}
+// Updates all status indicators, notes, formula, and visualization elements
+function showStep(){
+let s=steps[currentIndex];currentPseudo=s.pseudo||currentPseudo;
+renderPseudocode(s.line);renderDPTable(s);
+// Update text content
+$("note").textContent=`${s.note} (Step ${currentIndex+1}/${steps.length})`;
+$("progress").textContent=s.progressText||"";$("result").textContent=s.finalText||"";
+$("formula").textContent=s.formulaText||"Formula / explanation will appear here.";
+// Update status chips
+$("status-mode").textContent=s.mode==="backtrack"?"Backtracking":"Fill DP Table";
+$("status-step").textContent=`${currentIndex+1}/${steps.length}`;
+$("status-pos").textContent=`i=${s.i??"–"}, j=${s.j??"–"}`;
+$("status-answer").textContent=lastAnswer>=INF/2?"No solution / –":lastAnswer;
+// Update progress bar
+$("global-progress-bar").style.width=`${(currentIndex/(steps.length-1))*100}%`;
+}
+// Playback Controls
+function stopPlay(){clearInterval(timer);timer=null;$("play-btn").textContent="Play ▶️";}
+function startPlay(){timer=setInterval(()=>{currentIndex<steps.length-1
+?(currentIndex++,showStep()):stopPlay();},$("speed-range").value);
+$("play-btn").textContent="Pause ⏸";}
+// Core DP Function: Generates Fill Steps
+
+function generateFillSteps(c,a){
+const s=[],m=c.length,n=a,T=Array.from({length:m+1},()=>Array(n+1).fill(0));
+for(let j=1;j<=n;j++)T[0][j]=INF;
+s.push(makeStep({mode:"fill",pseudo:pseudoFill,table:T,i:0,j:0,line:1,
+note:"Base row with 0 coins",formulaText:"T[0][0]=0, T[0][j>0]=INF"}));
+
+for(let i=1;i<=m;i++){// Iterate Coins
+let coin=c[i-1];
+s.push(makeStep({mode:"fill",pseudo:pseudoFill,table:T,i,j:0,line:2,
+note:`Row for coin = ${coin}`,formulaText:`Processing coin ${coin}`}));
+
+for(let j=1;j<=n;j++){// Iterate Amounts
+s.push(makeStep({mode:"fill",pseudo:pseudoFill,table:T,i,j,line:4,
+note:`Cell T[${i}][${j}]`,formulaText:`Compute T with coin ${coin}`}));
+
+if(j>=coin){// Coin can be used
+let dont=T[i-1][j],prev=T[i][j-coin],use=prev>=INF/2?INF:prev+1,newVal=Math.min(dont,use);
+s.push(makeStep({mode:"fill",pseudo:pseudoFill,table:T,i,j,line:5,
+note:`Compare dont=${dont}, use=${use}`,formulaText:`dont=${dont}, use=${use}`}));
+T[i][j]=newVal;
+s.push(makeStep({mode:"fill",pseudo:pseudoFill,table:T,i,j,line:7,
+improvedCell:{i,j},note:`T=${newVal}`,formulaText:`min(dont,use)=${newVal}`}));
+}else{// Coin is too large
+T[i][j]=T[i-1][j];
+s.push(makeStep({mode:"fill",pseudo:pseudoFill,table:T,i,j,line:9,
+note:"Copy from above",formulaText:"j < coin → copy"}));
+}
+}
+}
+lastAnswer=T[c.length][a];
+s.push(makeStep({mode:"fill",pseudo:pseudoFill,table:T,i:c.length,j:a,
+note:"DP complete",finalText:solutionText(lastAnswer,c,a),formulaText:`Answer=${lastAnswer}`}));
+return{steps:s,finalTable:T,answer:lastAnswer};
+}
+// Core Function: Generates Backtracking Steps
+
+function generateBacktrackSteps(c,a,T,ans){
+const s=[],m=c.length,n=a;if(ans>=INF/2){// Handle no solution
+s.push(makeStep({mode:"backtrack",pseudo:pseudoBacktrack,table:T,i:m,j:n,
+note:"No solution",finalText:solutionText(ans,c,n),formulaText:"T[m][n]=INF"}));return s;}
+
+let i=m,j=n,chosen=[],path=[];
+s.push(makeStep({mode:"backtrack",pseudo:pseudoBacktrack,table:T,i,j,
+note:"Start bottom-right",progressText:"Coins: []",formulaText:"Begin backtracking",pathCells:path}));
+
+while(i>0&&j>0&&T[i][j]<INF/2){
+if(T[i][j]===T[i-1][j]){s.push(makeStep({mode:"backtrack",pseudo:pseudoBacktrack,table:T,i,j,
+note:`Skip coin ${c[i-1]}`,progressText:`Coins:[${chosen}]`,formulaText:`Equal → skip`,pathCells:path}));i--;}
+else{chosen.push(c[i-1]);path.push({i,j});
+s.push(makeStep({mode:"backtrack",pseudo:pseudoBacktrack,table:T,i,j,
+note:`Use coin ${c[i-1]}`,progressText:`Coins:[${chosen}]`,formulaText:`Use coin → move left`,pathCells:path}));
+j-=c[i-1];}
+}
+
+const ansList=chosen.slice().reverse();
+s.push(makeStep({mode:"backtrack",pseudo:pseudoBacktrack,table:T,i,j,
+note:"Done",progressText:`Coins:[${ansList}]`,
+finalText:`Minimum coins=${ans}. One solution=[${ansList}]`,
+formulaText:`Used coins reversed:[${ansList}]`,pathCells:path}));
+
+return s;
+}
+// Initialization and Event Handling 
+function rebuildAll(){
+stopPlay();
+// Parse inputs
+coins=$("coins-input").value.split(",").map(x=>+x.trim()).filter(n=>!isNaN(n));
+amount=+$("amount-input").value||0;
+// Generate visualization data
+const fill=generateFillSteps(coins,amount);
+fillSteps=fill.steps;backtrackSteps=generateBacktrackSteps(coins,amount,fill.finalTable,fill.answer);
+// Set current step array based on initial mode
+steps=$("mode-select").value==="fill"?fillSteps:backtrackSteps;
+currentIndex=0;$("result").textContent="";$("progress").textContent="";showStep();
+}
+
+function switchMode(){stopPlay();steps=$("mode-select").value==="fill"?fillSteps:backtrackSteps;
+currentIndex=0;$("result").textContent="";$("progress").textContent="";showStep();}
+// Attach event listeners
+$("build-btn").onclick=rebuildAll;
+$("next-btn").onclick=()=>{stopPlay();if(currentIndex<steps.length-1)currentIndex++,showStep();}
+$("prev-btn").onclick=()=>{stopPlay();if(currentIndex>0)currentIndex--,showStep();}
+$("reset-btn").onclick=()=>{stopPlay();currentIndex=0;showStep();}
+$("play-btn").onclick=()=>timer?stopPlay():startPlay();
+$("mode-select").onchange=switchMode;
+$("speed-range").oninput=e=>{$("speed-label").textContent=e.target.value+" ms";
+if(timer){stopPlay();startPlay();}}
+// Run on page load
+rebuildAll();
+</script>
+</body>
+</html>
