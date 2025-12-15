@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Knapsack – Advanced Visualizer</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Inter, Arial, sans-serif;
+  background:#0b1020;
+  color:#e5e7eb;
+}
+header{
+  padding:12px 20px;
+  border-bottom:1px solid #1e293b;
+}
+.container{
+  display:grid;
+  grid-template-columns:2.5fr 2fr;
+  gap:16px;
+  padding:16px;
+}
+.card{
+  background:#111827;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  padding:12px;
+}
+h3{margin:0 0 8px}
+input,button{
+  width:100%;
+  margin-top:6px;
+  padding:8px;
+  background:#020617;
+  color:white;
+  border:1px solid #1e293b;
+  border-radius:6px;
+}
+button{cursor:pointer}
+.row{display:flex;gap:6px}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+td,th{
+  border:1px solid #1e293b;
+  padding:6px;
+  text-align:center;
+}
+td.active{
+  background:#22c55e;
+  color:black;
+  font-weight:bold;
+}
+
+.story{
+  margin-top:8px;
+  padding:8px;
+  background:#020617;
+  color:#93c5fd;
+  border-radius:6px;
+}
+
+.diagram{
+  background:#020617;
+  padding:10px;
+  border-radius:8px;
+  font-family:monospace;
+  white-space:pre;
+  font-size:13px;
+  color:#93c5fd;
+}
+
+/* Progress */
+.progress-wrap{
+  margin-top:6px;
+}
+.speed-label{
+  font-size:12px;
+  color:#94a3b8;
+  text-align:right;
+  margin-bottom:4px;
+}
+.progress{
+  height:8px;
+  background:#020617;
+  border-radius:6px;
+  overflow:hidden;
+}
+.progress div{
+  height:100%;
+  width:0%;
+  background:#6366f1;
+  transition:width .2s;
+}
+
+.hidden{display:none}
+</style>
+</head>
+
+<body>
+
+<header>
+  <strong>Knapsack – Advanced Visualizer</strong>
+</header>
+
+<div class="container">
+
+<!-- LEFT -->
+<div class="card">
+  <h3>DP Table <span id="step">Step: 0</span></h3>
+
+  <!-- Speed label ABOVE progress bar -->
+  <div class="progress-wrap">
+    <div id="speedLabel" class="speed-label">Speed: 800 ms</div>
+    <div class="progress"><div id="bar"></div></div>
+  </div>
+
+  <div id="table"></div>
+  <div id="story" class="story">Click Start</div>
+</div>
+
+<!-- RIGHT -->
+<div>
+
+<div class="card">
+  <h3>Setup</h3>
+
+  Capacity
+  <input id="capacity" type="number" value="7">
+
+  Speed (ms)
+  <input id="speed" type="range" min="200" max="1500" value="800">
+
+  Items (w, v)
+  <div id="items"></div>
+
+  <div class="row">
+    <button onclick="addItem()">+ Add</button>
+    <button onclick="randomItems()">🎲 Random</button>
+  </div>
+
+  <button onclick="start()">Start</button>
+</div>
+
+<div class="card">
+  <h3>Playback</h3>
+  <button onclick="stepForward()">Step</button>
+  <button onclick="play()">Play</button>
+  <button onclick="pause()">Pause</button>
+  <button onclick="reset()">Reset</button>
+</div>
+
+<div class="card">
+  <h3>Diagrams</h3>
+  <button onclick="toggleDiagram()">Toggle Diagrams</button>
+  <button onclick="exportImage()">Export Step as Image</button>
+
+  <div id="diagramBox">
+    <h4>Decision Diagram</h4>
+    <div id="diagram" class="diagram">Waiting…</div>
+
+    <h4>Backtracking</h4>
+    <div id="backtrack" class="diagram">Not completed</div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+let items=[{w:2,v:3},{w:3,v:4},{w:4,v:5}];
+let dp=[],steps=[],idx=0,timer=null,started=false;
+
+const itemsDiv=document.getElementById("items");
+const bar=document.getElementById("bar");
+const speedSlider=document.getElementById("speed");
+const speedLabel=document.getElementById("speedLabel");
+
+/* Update speed label live */
+speedLabel.innerText=`Speed: ${speedSlider.value} ms`;
+speedSlider.oninput=()=> {
+  speedLabel.innerText=`Speed: ${speedSlider.value} ms`;
+  if(timer){ play(); } // live speed update
+};
+
+function renderItems(){
+  itemsDiv.innerHTML="";
+  items.forEach((it,i)=>{
+    itemsDiv.innerHTML+=`
+      <div class="row">
+        <input type="number" value="${it.w}" onchange="items[${i}].w=+this.value">
+        <input type="number" value="${it.v}" onchange="items[${i}].v=+this.value">
+      </div>`;
+  });
+}
+renderItems();
+
+function addItem(){items.push({w:1,v:1});renderItems();}
+function randomItems(){
+  items=Array.from({length:3},()=>({
+    w:Math.floor(Math.random()*5)+1,
+    v:Math.floor(Math.random()*8)+1
+  }));
+  renderItems();
+}
+
+function start(){
+  const W=+capacity.value,n=items.length;
+  dp=Array(n+1).fill().map(()=>Array(W+1).fill(0));
+  steps=[];idx=0;started=true;
+
+  for(let i=1;i<=n;i++)for(let w=0;w<=W;w++)steps.push({i,w});
+  render();
+  story.innerText="DP initialized.";
+  bar.style.width="0%";
+}
+
+function stepForward(){
+  if(!started||idx>=steps.length)return;
+  const {i,w}=steps[idx],it=items[i-1];
+  let inc=-1,exc=dp[i-1][w];
+  if(it.w<=w){inc=it.v+dp[i-1][w-it.w];dp[i][w]=Math.max(inc,exc);}
+  else dp[i][w]=exc;
+
+  render(i,w);
+  diagram.innerText=
+`Item ${i} (w=${it.w},v=${it.v})
+Exclude: ${exc}
+Include: ${inc}
+Chosen: ${dp[i][w]}`;
+
+  story.innerText=inc>exc?"Include item":"Exclude item";
+  bar.style.width=((idx+1)/steps.length*100)+"%";
+  step.innerText=`Step: ${idx+1}`;
+  idx++;
+
+  if(idx===steps.length)backtrack();
+}
+
+function backtrack(){
+  let res=[],w=capacity.value;
+  for(let i=items.length;i>0;i--){
+    if(dp[i][w]!==dp[i-1][w]){
+      res.push(`Item ${i} (w=${items[i-1].w},v=${items[i-1].v})`);
+      w-=items[i-1].w;
+    }
+  }
+  backtrack.innerText=res.reverse().join("\n")||"No items selected";
+}
+
+function render(ai=-1,aw=-1){
+  let h="<table><tr><th>i\\w</th>";
+  dp[0].forEach((_,w)=>h+=`<th>${w}</th>`);h+="</tr>";
+  dp.forEach((r,i)=>{
+    h+=`<tr><th>${i}</th>`;
+    r.forEach((v,w)=>h+=`<td class="${i===ai&&w===aw?'active':''}">${v}</td>`);
+    h+="</tr>";
+  });
+  h+="</table>";
+  table.innerHTML=h;
+}
+
+function play(){
+  pause();
+  timer=setInterval(stepForward, +speedSlider.value);
+}
+function pause(){clearInterval(timer);timer=null;}
+function reset(){
+  pause();
+  table.innerHTML="";
+  diagram.innerText="";
+  backtrack.innerText="";
+  bar.style.width="0%";
+  step.innerText="Step: 0";
+  started=false;
+  idx=0;
+}
+function toggleDiagram(){
+  diagramBox.classList.toggle("hidden");
+}
+
+/* Export */
+function exportImage(){
+  html2canvas(document.body).then(canvas=>{
+    const a=document.createElement("a");
+    a.href=canvas.toDataURL();
+    a.download="knapsack_step.png";
+    a.click();
+  });
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+</body>
+</html>
