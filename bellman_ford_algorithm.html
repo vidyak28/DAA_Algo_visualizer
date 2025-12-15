@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bellman-Ford Algorithm Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        textarea, input, button {
+            width: 100%;
+            margin: 10px 0;
+            padding: 8px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .output {
+            background-color: #ffffff;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Bellman-Ford Algorithm Visualizer</h1>
+
+<p>
+    Enter graph edges in the format:<br>
+    <b>source destination weight</b> (one per line)
+</p>
+
+<textarea id="edges" rows="6" placeholder="Example:
+0 1 4
+0 2 5
+1 2 -3
+2 3 4"></textarea>
+
+<label>Number of Vertices:</label>
+<input type="number" id="vertices" placeholder="Example: 4">
+
+<label>Source Vertex:</label>
+<input type="number" id="source" placeholder="Example: 0">
+
+<button onclick="runBellmanFord()">Run Bellman-Ford</button>
+
+<div class="output" id="output"></div>
+
+<script>
+    function runBellmanFord() {
+        const edgesInput = document.getElementById("edges").value.trim().split("\n");
+        const V = parseInt(document.getElementById("vertices").value);
+        const src = parseInt(document.getElementById("source").value);
+        const outputDiv = document.getElementById("output");
+
+        let edges = [];
+
+        for (let line of edgesInput) {
+            let parts = line.split(" ").map(Number);
+            edges.push({u: parts[0], v: parts[1], w: parts[2]});
+        }
+
+        let dist = new Array(V).fill(Infinity);
+        dist[src] = 0;
+
+        for (let i = 1; i <= V - 1; i++) {
+            for (let edge of edges) {
+                if (dist[edge.u] !== Infinity && dist[edge.u] + edge.w < dist[edge.v]) {
+                    dist[edge.v] = dist[edge.u] + edge.w;
+                }
+            }
+        }
+
+        // Check for negative weight cycle
+        for (let edge of edges) {
+            if (dist[edge.u] !== Infinity && dist[edge.u] + edge.w < dist[edge.v]) {
+                outputDiv.innerHTML = "<b>Graph contains a negative weight cycle.</b>";
+                return;
+            }
+        }
+
+        let result = "<h3>Shortest distances from source:</h3>";
+        for (let i = 0; i < V; i++) {
+            result += `Vertex ${i} : ${dist[i]}<br>`;
+        }
+
+        outputDiv.innerHTML = result;
+    }
+</script>
+
+</body>
+</html>
